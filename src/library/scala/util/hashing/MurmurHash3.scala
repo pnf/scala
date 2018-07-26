@@ -125,6 +125,39 @@ private[hashing] class MurmurHash3 {
     finalizeHash(h, a.length)
   }
 
+  /** Compute the hash of an array.
+    */
+  final def rangeOptimizedArrayHash[@specialized T](a: Array[T], seed: Int): Int = {
+    var h = seed
+    var i = 0
+    var rangeState = 0 // 0 = no data, 1 = first elem read, 2 = has valid diff, 3 = invalid
+    var rangeDiff = 0
+    var prev = 0
+    var initial = 0
+    while (i < a.length) {
+      val hash = a(i).##
+      h = mix(h, hash)
+      rangeState match {
+        case 0 =>
+          initial = hash
+          rangeState = 1
+        case 1 =>
+          rangeDiff = hash - prev
+          rangeState = 2
+        case 2 =>
+          if(rangeDiff != hash - prev) rangeState = 3
+        case _ =>
+      }
+      prev = hash
+      i += 1
+    }
+    if(rangeState == 2) rangeHash(initial, rangeDiff, prev, seed)
+    else finalizeHash(h, a.length)
+  }
+
+  final def rangeHash(start: Int, diff: Int, end: Int, seed: Int): Int =
+    finalizeHash(mix(mix(mix(seed, start), diff), end), MurmurHash3.rangeSeqSeed)
+
   /** Compute the hash of a byte array. Faster than arrayHash, because
    *  it hashes 4 bytes at once.
    */
@@ -204,6 +237,8 @@ object MurmurHash3 extends MurmurHash3 {
   final val seqSeed         = "Seq".hashCode
   final val mapSeed         = "Map".hashCode
   final val setSeed         = "Set".hashCode
+
+  private final val rangeSeqSeed = "Range".hashCode
 
   def arrayHash[@specialized T](a: Array[T]): Int  = arrayHash(a, arraySeed)
   def bytesHash(data: Array[Byte]): Int            = bytesHash(data, arraySeed)
