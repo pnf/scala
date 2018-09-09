@@ -32,6 +32,8 @@ class MurmurHash3Benchmark {
     mixed2 = Array.copyOf(ordered, ordered.length)
     swap(mixed1, 0, 1)
     swap(mixed2, mixed2.length-1, mixed2.length-2)
+    assert(MurmurHash3.arrayHash(mixed1, MurmurHash3.seqSeed) == MurmurHash3.rangeOptimizedArrayHash(mixed1, MurmurHash3.seqSeed))
+    assert(MurmurHash3.arrayHash(mixed2, MurmurHash3.seqSeed) == MurmurHash3.rangeOptimizedArrayHash(mixed2, MurmurHash3.seqSeed))
   }
 
   def swap(a: Array[Int], i1: Int, i2: Int): Unit = {
@@ -40,13 +42,13 @@ class MurmurHash3Benchmark {
     a(i2) = tmp
   }
 
-  @Benchmark def arrayHashOrdered(bh: Blackhole): Unit = {
-    val h = MurmurHash3.arrayHash(ordered, MurmurHash3.seqSeed)
+  @Benchmark def A_rangeOptimizedArrayHashOrdered(bh: Blackhole): Unit = {
+    val h = MurmurHash3.rangeOptimizedArrayHash(ordered, MurmurHash3.seqSeed)
     bh.consume(h)
   }
 
-  @Benchmark def rangeOptimizedArrayHashOrdered(bh: Blackhole): Unit = {
-    val h = MurmurHash3.rangeOptimizedArrayHash(ordered, MurmurHash3.seqSeed)
+  @Benchmark def B_arrayHashOrdered(bh: Blackhole): Unit = {
+    val h = MurmurHash3.arrayHash(ordered, MurmurHash3.seqSeed)
     bh.consume(h)
   }
 

@@ -115,10 +115,13 @@ private[hashing] class MurmurHash3 {
 
   /** Compute the hash of an array.
    */
-  final def arrayHash[@specialized T](a: Array[T], seed: Int): Int = {
+  final def arrayHash[@specialized T](a: Array[T], seed: Int): Int = arrayHash(a, 0, seed)
+
+  final def arrayHash[@specialized T](a: Array[T], i0: Int, seed: Int): Int = {
     var h = seed
-    var i = 0
-    while (i < a.length) {
+    var i = i0
+    val l = a.length
+    while (i < l) {
       h = mix(h, a(i).##)
       i += 1
     }
@@ -129,34 +132,40 @@ private[hashing] class MurmurHash3 {
     */
   final def rangeOptimizedArrayHash[@specialized T](a: Array[T], seed: Int): Int = {
     var h = seed
-    var i = 0
-    var rangeState = 0 // 0 = no data, 1 = first elem read, 2 = has valid diff, 3 = invalid
-    var rangeDiff = 0
-    var prev = 0
-    var initial = 0
-    while (i < a.length) {
-      val hash = a(i).##
-      h = mix(h, hash)
-      rangeState match {
-        case 0 =>
-          initial = hash
-          rangeState = 1
-        case 1 =>
-          rangeDiff = hash - prev
-          rangeState = 2
-        case 2 =>
-          if(rangeDiff != hash - prev) rangeState = 3
-        case _ =>
-      }
-      prev = hash
-      i += 1
+    val l = a.length
+    l match {
+      case 0 ⇒
+        finalizeHash(h, 0)
+      case 1 ⇒
+        finalizeHash(mix(h, a(0).##), 1)
+      case _ ⇒
+        val initial = a(0).##
+        h = mix(h, initial)
+        val h0 = h
+        var prev = a(1).##
+        val rangeDiff = prev - initial
+
+        var i = 2
+        while (i < l) {
+          h = mix(h, prev)
+          val hash = a(i).##
+          if(rangeDiff != hash - prev)
+            return arrayHash(a, i+1, mix(h, hash))
+          prev = hash
+          i += 1
+        }
+
+        rangeHash(h0, rangeDiff, prev)
+
     }
-    if(rangeState == 2) rangeHash(initial, rangeDiff, prev, seed)
-    else finalizeHash(h, a.length)
   }
 
   final def rangeHash(start: Int, diff: Int, end: Int, seed: Int): Int =
-    finalizeHash(mix(mix(mix(seed, start), diff), end), MurmurHash3.rangeSeqSeed)
+    rangeHash(mix(seed,start), diff, end)
+    //finalizeHash(mix(mix(mix(seed, start), diff), end), MurmurHash3.rangeSeqSeed)
+
+  final def rangeHash(h0: Int, diff: Int, end: Int): Int =
+    finalizeHash(mix(mix(h0, diff), end), MurmurHash3.rangeSeqSeed)
 
   /** Compute the hash of a byte array. Faster than arrayHash, because
    *  it hashes 4 bytes at once.
