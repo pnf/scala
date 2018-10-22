@@ -114,19 +114,82 @@ private[hashing] class MurmurHash3 {
   }
 
   /** Compute the hash of an array.
-   */
+    */
   final def arrayHash[@specialized T](a: Array[T], seed: Int): Int = arrayHash(a, 0, seed)
-
   final def arrayHash[@specialized T](a: Array[T], i0: Int, seed: Int): Int = {
     var h = seed
     var i = i0
     val l = a.length
+    var prev = seed
     while (i < l) {
       h = mix(h, a(i).##)
       i += 1
     }
     finalizeHash(h, a.length)
   }
+
+  final def arrayHashTestOrig[@specialized T](a: Array[T], seed: Int): Int = {
+    var h = seed
+    var i = 0
+    val l = a.length
+    var prev = seed
+    while (i < l) {
+      val hash = a(i).##
+      h = mix(h, hash)
+      i += 1
+    }
+    finalizeHash(h, a.length)
+  }
+
+  final def arrayHashTestStupid[@specialized T](a: Array[T], seed: Int): Int = {
+    var h = seed
+    var i = 0
+    val l = a.length
+    var prev = seed
+    while (i < l) {
+      val hash = a(i).##
+      if(prev == hash)
+        h = mix(h, prev)
+      else
+        h = mix(h, hash)
+      prev = hash
+      i += 1
+    }
+    finalizeHash(h, a.length)
+  }
+
+  /** Compute the hash of an array.
+    */
+  final def arrayHashTestNew[@specialized T](a: Array[T], seed: Int): Int = {
+    var h = seed
+    val l = a.length
+    l match {
+      case 0 ⇒
+        finalizeHash(h, 0)
+      case 1 ⇒
+        finalizeHash(mix(h, a(0).##), 1)
+      case _ ⇒
+        val initial = a(0).##
+        h = mix(h, initial)
+        val h0 = h
+        var prev = a(1).##
+        val rangeDiff = prev - initial
+
+        var i = 2
+        while (i < l) {
+          h = mix(h, prev)
+          val hash = a(i).##
+          if(rangeDiff != hash - prev)
+            return arrayHash(a, i+1, mix(h, hash))
+          prev = hash
+          i += 1
+        }
+
+        rangeHash(h0, rangeDiff, prev)
+
+    }
+  }
+
 
   /** Compute the hash of an array.
     */

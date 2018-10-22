@@ -9,13 +9,14 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkMode(Array(Mode.AverageTime))
 @Fork(2)
 @Threads(1)
-@Warmup(iterations = 10)
+@Warmup(iterations = 2000)
 @Measurement(iterations = 10)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Benchmark)
 class MurmurHash3Benchmark {
 
-  @Param(Array("10", "100", "1000", "10000"))
+  @Param(Array(/* "10", "100", */ "1000" /*, "10000" */))
+  //@Param(Array("10000"))
   var size: Int = _
   var ordered: Array[Int] = _
   var mixed1: Array[Int] = _
@@ -42,15 +43,25 @@ class MurmurHash3Benchmark {
     a(i2) = tmp
   }
 
-  @Benchmark def A_rangeOptimizedArrayHashOrdered(bh: Blackhole): Unit = {
-    val h = MurmurHash3.rangeOptimizedArrayHash(ordered, MurmurHash3.seqSeed)
+  @Benchmark def A_arrayHashOrdered(bh: Blackhole): Unit = {
+    val h = MurmurHash3.arrayHashTestOrig(ordered, MurmurHash3.seqSeed)
     bh.consume(h)
   }
 
-  @Benchmark def B_arrayHashOrdered(bh: Blackhole): Unit = {
-    val h = MurmurHash3.arrayHash(ordered, MurmurHash3.seqSeed)
+/*
+  @Benchmark def B_rangeOptimizedArrayHashOrdered(bh: Blackhole): Unit = {
+    val h = MurmurHash3.arrayHashTestNew(ordered, MurmurHash3.seqSeed)
     bh.consume(h)
   }
+  */
+
+  @Benchmark def C_arrayHashOrderedStupid(bh: Blackhole): Unit = {
+    val h = MurmurHash3.arrayHashTestStupid(ordered, MurmurHash3.seqSeed)
+    bh.consume(h)
+  }
+
+
+  /*
 
   @Benchmark def rangeHash(bh: Blackhole): Unit = {
     val h = MurmurHash3.rangeHash(1, 1, size, MurmurHash3.seqSeed)
@@ -66,4 +77,7 @@ class MurmurHash3Benchmark {
     val h = MurmurHash3.rangeOptimizedArrayHash(mixed2, MurmurHash3.seqSeed)
     bh.consume(h)
   }
+
+  */
+
 }
